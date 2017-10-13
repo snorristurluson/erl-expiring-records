@@ -84,20 +84,27 @@ handle_call(Request, _From, State) ->
     D = State#state.data,
     case Request of
         {add, {Key, Value, ExpiresAt}} ->
-            erlang:display(ExpiresAt),
             D2 = dict:store(Key, {Value, ExpiresAt}, D),
             {reply, ok, #state{data=D2}};
 
         {fetch, Key} ->
-            {Value, ExpiresAt} = dict:fetch(Key, D),
-            Now = erlang:system_time(second),
-            erlang:display(Now),
-            case Now < ExpiresAt of
-                true ->
-                    {reply, {ok, Value}, State};
-                _ ->
+            case dict:find(Key, D) of
+                {ok, {Value, ExpiresAt}} ->
+                    Now = erlang:system_time(second),
+                    case Now < ExpiresAt of
+                        true ->
+                            {reply, {ok, Value}, State};
+                        _ ->
+                            D2 = dict:erase(Key, D),
+                            {reply, not_found, #state{data=D2}}
+                    end;
+                error ->
                     {reply, not_found, State}
             end;
+
+
+        size ->
+            {reply, dict:size(D), State};
 
         _ ->
             {reply, unknown_command, State}
