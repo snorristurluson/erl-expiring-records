@@ -9,58 +9,59 @@
 -module(app_test).
 -author("snorri").
 
--include_lib("eunit/include/eunit.hrl").
+-include_lib("common_test/include/ct.hrl").
 -include("expiring_records.hrl").
 
-simple_test() ->
-    ?assert(true).
+-export([all/0, init_per_testcase/2, end_per_testcase/2]).
+-export[did_start/1, undefined_command/1, add_record/1,
+    get_expired_record/1, get_non_expired_record/1].
 
-expiring_records_test_() ->
-    {foreach, fun start/0, fun stop/1, [
-        fun undefined_command/1,
-        fun did_start/1,
-        fun add_record/1,
-        fun get_non_expired_record/1,
-        fun get_expired_record/1
-    ]}.
+all() -> [
+    undefined_command,
+    did_start,
+    add_record,
+    get_non_expired_record,
+    get_expired_record
+].
 
-start() ->
+init_per_testcase(_, Config) ->
     erlang:display("start"),
     {ok, Pid} = expiring_records:start_link(),
-    Pid.
+    [{pid, Pid} | Config].
 
-stop(Pid) ->
+end_per_testcase(_, Config) ->
     erlang:display("stop"),
+    Pid = ?config(pid, Config),
     expiring_records:stop(Pid).
 
-did_start(Pid) ->
+
+did_start(Config) ->
     erlang:display("did_start"),
-    ?_assert(Pid > 0).
+    Pid = ?config(pid, Config),
+    Pid > 0.
 
-undefined_command(Pid) ->
+undefined_command(Config) ->
     erlang:display("undefined_command"),
-    unknown_command = gen_server:call(Pid, bingo),
-    ?_assert(true).
+    Pid = ?config(pid, Config),
+    unknown_command = gen_server:call(Pid, bingo).
 
-add_record(Pid) ->
+add_record(Config) ->
     erlang:display("add_record"),
-    Record = {"bingo", "bongo",erlang:system_time(second) + 3600},
-    ok = gen_server:call(Pid, {add, Record}),
-    ?_assert(true).
+    Pid = ?config(pid, Config),
+    Record = {"bingo", "bongo", erlang:system_time(second) + 3600},
+    ok = gen_server:call(Pid, {add, Record}).
 
-get_non_expired_record(Pid) ->
+get_non_expired_record(Config) ->
     erlang:display("get_non_expired_record"),
-    Record = {"bingo", "bongo",erlang:system_time(second) + 3600},
+    Pid = ?config(pid, Config),
+    Record = {"bingo", "bongo", erlang:system_time(second) + 3600},
     ok = gen_server:call(Pid, {add, Record}),
-    {ok, "bongo"} = gen_server:call(Pid, {fetch, "bingo"}),
+    {ok, "bongo"} = gen_server:call(Pid, {fetch, "bingo"}).
 
-    ?_assert(true).
-
-get_expired_record(Pid) ->
+get_expired_record(Config) ->
     erlang:display("get_expired_record"),
-    Record = {"bingo", "bongo",erlang:system_time(second) + 1},
+    Pid = ?config(pid, Config),
+    Record = {"bingo", "bongo", erlang:system_time(second) + 1},
     ok = gen_server:call(Pid, {add, Record}),
-    timer:sleep(2),
-    not_found = gen_server:call(Pid, {fetch, "bingo"}),
-
-    ?_assert(true).
+    timer:sleep(2000),
+    not_found = gen_server:call(Pid, {fetch, "bingo"}).
