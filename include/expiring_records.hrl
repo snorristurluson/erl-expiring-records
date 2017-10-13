@@ -8,9 +8,7 @@
 %%%-------------------------------------------------------------------
 -author("snorri").
 
--record(expiring_records_state, {data=dict:new()}).
--record(expiring_records_record, {
-    key,
-    value,
-    expires_at
+-record(state, {
+    data=dict:new()
 }).
+

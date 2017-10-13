@@ -60,10 +60,10 @@ stop(Pid) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec(init(Args :: term()) ->
-    {ok, State :: #expiring_records_state{}} | {ok, State :: #expiring_records_state{}, timeout() | hibernate} |
+    {ok, State :: #state{}} | {ok, State :: #state{}, timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
 init([]) ->
-    {ok, #expiring_records_state{}}.
+    {ok, #state{}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -73,26 +73,29 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()},
-    State :: #expiring_records_state{}) ->
-    {reply, Reply :: term(), NewState :: #expiring_records_state{}} |
-    {reply, Reply :: term(), NewState :: #expiring_records_state{}, timeout() | hibernate} |
-    {noreply, NewState :: #expiring_records_state{}} |
-    {noreply, NewState :: #expiring_records_state{}, timeout() | hibernate} |
-    {stop, Reason :: term(), Reply :: term(), NewState :: #expiring_records_state{}} |
-    {stop, Reason :: term(), NewState :: #expiring_records_state{}}).
+    State :: #state{}) ->
+    {reply, Reply :: term(), NewState :: #state{}} |
+    {reply, Reply :: term(), NewState :: #state{}, timeout() | hibernate} |
+    {noreply, NewState :: #state{}} |
+    {noreply, NewState :: #state{}, timeout() | hibernate} |
+    {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
+    {stop, Reason :: term(), NewState :: #state{}}).
 handle_call(Request, _From, State) ->
-    D = State#expiring_records_state.data,
+    D = State#state.data,
     case Request of
-        {add, Record} ->
-            D2 = dict:store(
-                Record#expiring_records_record.key,
-                Record#expiring_records_record.value,
-                D),
-            {reply, ok, #expiring_records_state{data=D2}};
+        {add, {Key, Value, ExpiresAt}} ->
+            D2 = dict:store(Key, {Value, ExpiresAt}, D),
+            {reply, ok, #state{data=D2}};
 
         {fetch, Key} ->
-            Value = dict:fetch(Key, D),
-            {reply, {ok, Value}, State};
+            {Value, ExpiresAt} = dict:fetch(Key, D),
+            Now = erlang:system_time(second),
+            case Now > ExpiresAt of
+                true ->
+                    {reply, {ok, Value}, State};
+                _ ->
+                    {reply, not_found, State}
+            end;
 
         _ ->
             {reply, unknown_command, State}
@@ -105,10 +108,10 @@ handle_call(Request, _From, State) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(handle_cast(Request :: term(), State :: #expiring_records_state{}) ->
-    {noreply, NewState :: #expiring_records_state{}} |
-    {noreply, NewState :: #expiring_records_state{}, timeout() | hibernate} |
-    {stop, Reason :: term(), NewState :: #expiring_records_state{}}).
+-spec(handle_cast(Request :: term(), State :: #state{}) ->
+    {noreply, NewState :: #state{}} |
+    {noreply, NewState :: #state{}, timeout() | hibernate} |
+    {stop, Reason :: term(), NewState :: #state{}}).
 handle_cast(_Request, State) ->
     {noreply, State}.
 
@@ -122,10 +125,10 @@ handle_cast(_Request, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
--spec(handle_info(Info :: timeout() | term(), State :: #expiring_records_state{}) ->
-    {noreply, NewState :: #expiring_records_state{}} |
-    {noreply, NewState :: #expiring_records_state{}, timeout() | hibernate} |
-    {stop, Reason :: term(), NewState :: #expiring_records_state{}}).
+-spec(handle_info(Info :: timeout() | term(), State :: #state{}) ->
+    {noreply, NewState :: #state{}} |
+    {noreply, NewState :: #state{}, timeout() | hibernate} |
+    {stop, Reason :: term(), NewState :: #state{}}).
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -141,7 +144,7 @@ handle_info(_Info, State) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec(terminate(Reason :: (normal | shutdown | {shutdown, term()} | term()),
-    State :: #expiring_records_state{}) -> term()).
+    State :: #state{}) -> term()).
 terminate(_Reason, _State) ->
     ok.
 
@@ -153,9 +156,9 @@ terminate(_Reason, _State) ->
 %% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
 %% @end
 %%--------------------------------------------------------------------
--spec(code_change(OldVsn :: term() | {down, term()}, State :: #expiring_records_state{},
+-spec(code_change(OldVsn :: term() | {down, term()}, State :: #state{},
     Extra :: term()) ->
-    {ok, NewState :: #expiring_records_state{}} | {error, Reason :: term()}).
+    {ok, NewState :: #state{}} | {error, Reason :: term()}).
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
