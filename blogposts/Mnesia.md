@@ -1,6 +1,8 @@
-Continuing with my expiring records module, I've now switched it
-over to using Mnesia, rather than a dictionary object stored in
-the state of my gen_server instance.
+Continuing with my [expiring records](https://github.com/snorristurluson/erl-expiring-records)
+module (see [my previous blog](https://ccpsnorlax.blogspot.is/2017/10/expiring-records-in-erlang.html)),
+I've now switched it over to using 
+[Mnesia](http://erlang.org/doc/man/mnesia.html), rather than a 
+dictionary object stored in the state of my *gen_server* instance.
 
 It is still not a truly global, cross-node key/value store for
 expiring records, but it is getting there. I wanted to focus first
@@ -79,6 +81,6 @@ handle_call(size, _From, State) ->
 
 This looks much better, and is getting closer to my intended
 functionality. My next session will focus on getting a disc
-base, replicated Mnesia table. Then I also need add to add
+based, replicated Mnesia table. Then I also need add to add
 trimming, to remove expired records from the table even if they
 aren't being looked up.
