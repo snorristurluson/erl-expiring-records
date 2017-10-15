@@ -26,6 +26,7 @@ all() -> [
 ].
 
 init_per_testcase(_, Config) ->
+    mnesia:create_schema([node()]),
     mnesia:start(),
     {ok, Pid} = expiring_records:start(),
     expiring_records:clear(),

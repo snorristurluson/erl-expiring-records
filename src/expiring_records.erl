@@ -240,14 +240,15 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 
 prepare_table() ->
+    DbNodes = mnesia:system_info(db_nodes),
     case catch mnesia:table_info(expiring_records, attributes) of
         {'EXIT', _} ->
             %% Table does not exist - create it
-            erlang:display("Creating table"),
-            mnesia:create_table(
+            {atomic, ok} = mnesia:create_table(
                 expiring_records, [
                     {attributes, record_info(fields, record)},
-                    {record_name, record}
+                    {record_name, record},
+                    {disc_copies, DbNodes}
                 ]
             ),
             ok;
