@@ -21,11 +21,14 @@ all() -> [
     get_non_expired_record,
     get_expired_record,
     get_non_existing_record,
-    expired_record_is_removed
+    expired_record_is_removed,
+    size_is_one_after_adding_one_record
 ].
 
 init_per_testcase(_, Config) ->
+    mnesia:start(),
     {ok, Pid} = expiring_records:start(),
+    expiring_records:clear(),
     [{pid, Pid} | Config].
 
 end_per_testcase(_, _Config) ->
@@ -61,3 +64,6 @@ expired_record_is_removed(_Config) ->
     not_found = expiring_records:fetch("bingo"),
     0 = expiring_records:size().
 
+size_is_one_after_adding_one_record(_Config) ->
+    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second) + 3600),
+    1 = expiring_records:size().

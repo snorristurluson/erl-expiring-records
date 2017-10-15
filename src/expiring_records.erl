@@ -13,7 +13,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/0, stop/0, store/3, fetch/1, size/0]).
+-export([start/0, stop/0, clear/0, store/3, fetch/1, size/0]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -39,6 +39,7 @@
 -spec(start() ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start() ->
+    prepare_table(),
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %%--------------------------------------------------------------------
@@ -94,6 +95,9 @@ fetch(Key) ->
 size() ->
     gen_server:call(?MODULE, size).
 
+clear() ->
+    gen_server:call(?MODULE, clear).
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -132,29 +136,40 @@ init([]) ->
     {stop, Reason :: term(), NewState :: #state{}}).
 
 handle_call({add, {Key, Value, ExpiresAt}}, _From, State) ->
-    D = State#state.data,
-    D2 = dict:store(Key, {Value, ExpiresAt}, D),
-    {reply, ok, #state{data=D2}};
+    Trans = fun() ->
+        Record = #record{key=Key, value=Value, expires_at = ExpiresAt},
+        mnesia:write(expiring_records, Record, write)
+    end,
+    {atomic, ok} = mnesia:transaction(Trans),
+    {reply, ok, State};
 
 handle_call({fetch, Key}, _From, State) ->
-    D = State#state.data,
-    case dict:find(Key, D) of
-        {ok, {Value, ExpiresAt}} ->
-            Now = erlang:system_time(second),
-            case Now < ExpiresAt of
-                true ->
-                    {reply, {ok, Value}, State};
-                _ ->
-                    D2 = dict:erase(Key, D),
-                    {reply, not_found, #state{data=D2}}
-            end;
-        error ->
-            {reply, not_found, State}
-    end;
+    Trans = fun() ->
+        Result = mnesia:match_object(expiring_records, #record{key = Key, value = '_', expires_at = '_'}, read),
+        case Result of
+            [{record, Key, Value, ExpiresAt}] ->
+                Now = erlang:system_time(second),
+                case Now < ExpiresAt of
+                    true ->
+                        {ok, Value};
+                    _ ->
+                        mnesia:delete(expiring_records, Key, write),
+                        not_found
+                end;
+            [] ->
+                not_found
+        end
+    end,
+    {atomic, Result} = mnesia:transaction(Trans),
+    {reply, Result, State};
 
 handle_call(size, _From, State) ->
-    D = State#state.data,
-    {reply, dict:size(D), State};
+    Size = mnesia:table_info(expiring_records, size),
+    {reply, Size, State};
+
+handle_call(clear, _From, State) ->
+    mnesia:clear_table(expiring_records),
+    {reply, ok, State};
 
 handle_call(_Request, _From, State) ->
     {reply, unknown_command, State}.
@@ -223,3 +238,20 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+prepare_table() ->
+    case catch mnesia:table_info(expiring_records, attributes) of
+        {'EXIT', _} ->
+            %% Table does not exist - create it
+            erlang:display("Creating table"),
+            mnesia:create_table(
+                expiring_records, [
+                    {attributes, record_info(fields, record)},
+                    {record_name, record}
+                ]
+            ),
+            ok;
+        _Attributes ->
+            ok
+    end,
+    mnesia:wait_for_tables([expiring_records], infinite).

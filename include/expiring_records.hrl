@@ -12,3 +12,8 @@
     data=dict:new()
 }).
 
+-record(record, {
+    key,
+    value,
+    expires_at
+}).
