@@ -28,9 +28,8 @@ init_per_testcase(_, Config) ->
     {ok, Pid} = expiring_records:start(),
     [{pid, Pid} | Config].
 
-end_per_testcase(_, Config) ->
-    Pid = ?config(pid, Config),
-    expiring_records:stop(Pid).
+end_per_testcase(_, _Config) ->
+    expiring_records:stop().
 
 
 did_start(Config) ->
@@ -41,29 +40,24 @@ undefined_command(Config) ->
     Pid = ?config(pid, Config),
     unknown_command = gen_server:call(Pid, bingo).
 
-add_record(Config) ->
-    Pid = ?config(pid, Config),
-    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second) + 3600, Pid).
+add_record(_Config) ->
+    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second) + 3600).
 
-get_non_expired_record(Config) ->
-    Pid = ?config(pid, Config),
-    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second) + 3600, Pid),
-    {ok, "bongo"} = expiring_records:fetch("bingo", Pid).
+get_non_expired_record(_Config) ->
+    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second) + 3600),
+    {ok, "bongo"} = expiring_records:fetch("bingo").
 
-get_expired_record(Config) ->
-    Pid = ?config(pid, Config),
-    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second) + 1, Pid),
+get_expired_record(_Config) ->
+    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second) + 1),
     timer:sleep(2000),
-    not_found = expiring_records:fetch("bingo", Pid).
+    not_found = expiring_records:fetch("bingo").
 
-get_non_existing_record(Config) ->
-    Pid = ?config(pid, Config),
-    not_found = expiring_records:fetch("bingo", Pid).
+get_non_existing_record(_Config) ->
+    not_found = expiring_records:fetch("bingo").
 
-expired_record_is_removed(Config) ->
-    Pid = ?config(pid, Config),
-    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second), Pid),
+expired_record_is_removed(_Config) ->
+    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second)),
     timer:sleep(1000),
-    not_found = expiring_records:fetch("bingo", Pid),
-    0 = expiring_records:size(Pid).
+    not_found = expiring_records:fetch("bingo"),
+    0 = expiring_records:size().
 

@@ -13,7 +13,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/0, stop/1, store/4, fetch/2, size/1]).
+-export([start/0, stop/0, store/3, fetch/1, size/0]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -39,7 +39,7 @@
 -spec(start() ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -47,8 +47,8 @@ start() ->
 %%
 %% @end
 %%--------------------------------------------------------------------
-stop(Pid) ->
-    gen_server:stop(Pid).
+stop() ->
+    gen_server:stop(?MODULE).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -62,12 +62,11 @@ stop(Pid) ->
 %%--------------------------------------------------------------------
 -spec(store(Key :: term(),
     Value :: term(),
-    ExpiresAt :: integer(),
-    Pid :: pid()) ->
+    ExpiresAt :: integer()) ->
     ok ).
-store(Key, Value, ExpiresAt, Pid) ->
+store(Key, Value, ExpiresAt) ->
     Record = {Key, Value, ExpiresAt},
-    gen_server:call(Pid, {add, Record}).
+    gen_server:call(?MODULE, {add, Record}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -77,11 +76,11 @@ store(Key, Value, ExpiresAt, Pid) ->
 %% time of the call.
 %% @end
 %%--------------------------------------------------------------------
--spec(fetch(Key :: term(), Pid :: pid()) ->
+-spec(fetch(Key :: term()) ->
     {ok, Value :: term()} | not_found ).
 
-fetch(Key, Pid) ->
-    gen_server:call(Pid, {fetch, Key}).
+fetch(Key) ->
+    gen_server:call(?MODULE, {fetch, Key}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -89,11 +88,11 @@ fetch(Key, Pid) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(size(Pid :: pid()) ->
+-spec(size() ->
     Size :: integer()).
 
-size(Pid) ->
-    gen_server:call(Pid, size).
+size() ->
+    gen_server:call(?MODULE, size).
 
 %%%===================================================================
 %%% gen_server callbacks
