@@ -80,35 +80,34 @@ init([]) ->
     {noreply, NewState :: #state{}, timeout() | hibernate} |
     {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
     {stop, Reason :: term(), NewState :: #state{}}).
-handle_call(Request, _From, State) ->
+
+handle_call({add, {Key, Value, ExpiresAt}}, _From, State) ->
     D = State#state.data,
-    case Request of
-        {add, {Key, Value, ExpiresAt}} ->
-            D2 = dict:store(Key, {Value, ExpiresAt}, D),
-            {reply, ok, #state{data=D2}};
+    D2 = dict:store(Key, {Value, ExpiresAt}, D),
+    {reply, ok, #state{data=D2}};
 
-        {fetch, Key} ->
-            case dict:find(Key, D) of
-                {ok, {Value, ExpiresAt}} ->
-                    Now = erlang:system_time(second),
-                    case Now < ExpiresAt of
-                        true ->
-                            {reply, {ok, Value}, State};
-                        _ ->
-                            D2 = dict:erase(Key, D),
-                            {reply, not_found, #state{data=D2}}
-                    end;
-                error ->
-                    {reply, not_found, State}
+handle_call({fetch, Key}, _From, State) ->
+    D = State#state.data,
+    case dict:find(Key, D) of
+        {ok, {Value, ExpiresAt}} ->
+            Now = erlang:system_time(second),
+            case Now < ExpiresAt of
+                true ->
+                    {reply, {ok, Value}, State};
+                _ ->
+                    D2 = dict:erase(Key, D),
+                    {reply, not_found, #state{data=D2}}
             end;
+        error ->
+            {reply, not_found, State}
+    end;
 
+handle_call(size, _From, State) ->
+    D = State#state.data,
+    {reply, dict:size(D), State};
 
-        size ->
-            {reply, dict:size(D), State};
-
-        _ ->
-            {reply, unknown_command, State}
-    end.
+handle_call(_Request, _From, State) ->
+    {reply, unknown_command, State}.
 
 %%--------------------------------------------------------------------
 %% @private
