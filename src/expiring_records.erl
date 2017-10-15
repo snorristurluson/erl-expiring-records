@@ -13,7 +13,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, stop/1]).
+-export([start/0, stop/1, store/4, fetch/2, size/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -36,13 +36,64 @@
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(start_link() ->
+-spec(start() ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link() ->
+start() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Stops the server
+%%
+%% @end
+%%--------------------------------------------------------------------
 stop(Pid) ->
     gen_server:stop(Pid).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Stores the value for the key.
+%%
+%% Stores a Key/Value pair. If Key already exists its value is
+%% replaced. The Key/Value has an expiration time and will be
+%% removed at that time.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(store(Key :: term(),
+    Value :: term(),
+    ExpiresAt :: integer(),
+    Pid :: pid()) ->
+    ok ).
+store(Key, Value, ExpiresAt, Pid) ->
+    Record = {Key, Value, ExpiresAt},
+    gen_server:call(Pid, {add, Record}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Fetches a value for the given key.
+%%
+%% If the value is found, it is guaranteed not to be expired at the
+%% time of the call.
+%% @end
+%%--------------------------------------------------------------------
+-spec(fetch(Key :: term(), Pid :: pid()) ->
+    {ok, Value :: term()} | not_found ).
+
+fetch(Key, Pid) ->
+    gen_server:call(Pid, {fetch, Key}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Get an estimated size (some records may be expired).
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(size(Pid :: pid()) ->
+    Size :: integer()).
+
+size(Pid) ->
+    gen_server:call(Pid, size).
 
 %%%===================================================================
 %%% gen_server callbacks

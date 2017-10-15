@@ -25,7 +25,7 @@ all() -> [
 ].
 
 init_per_testcase(_, Config) ->
-    {ok, Pid} = expiring_records:start_link(),
+    {ok, Pid} = expiring_records:start(),
     [{pid, Pid} | Config].
 
 end_per_testcase(_, Config) ->
@@ -43,31 +43,27 @@ undefined_command(Config) ->
 
 add_record(Config) ->
     Pid = ?config(pid, Config),
-    Record = {"bingo", "bongo", erlang:system_time(second) + 3600},
-    ok = gen_server:call(Pid, {add, Record}).
+    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second) + 3600, Pid).
 
 get_non_expired_record(Config) ->
     Pid = ?config(pid, Config),
-    Record = {"bingo", "bongo", erlang:system_time(second) + 3600},
-    ok = gen_server:call(Pid, {add, Record}),
-    {ok, "bongo"} = gen_server:call(Pid, {fetch, "bingo"}).
+    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second) + 3600, Pid),
+    {ok, "bongo"} = expiring_records:fetch("bingo", Pid).
 
 get_expired_record(Config) ->
     Pid = ?config(pid, Config),
-    Record = {"bingo", "bongo", erlang:system_time(second) + 1},
-    ok = gen_server:call(Pid, {add, Record}),
+    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second) + 1, Pid),
     timer:sleep(2000),
-    not_found = gen_server:call(Pid, {fetch, "bingo"}).
+    not_found = expiring_records:fetch("bingo", Pid).
 
 get_non_existing_record(Config) ->
     Pid = ?config(pid, Config),
-    not_found = gen_server:call(Pid, {fetch, "bingo"}).
+    not_found = expiring_records:fetch("bingo", Pid).
 
 expired_record_is_removed(Config) ->
     Pid = ?config(pid, Config),
-    Record = {"bingo", "bongo", erlang:system_time(second)},
-    ok = gen_server:call(Pid, {add, Record}),
+    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second), Pid),
     timer:sleep(1000),
-    not_found = gen_server:call(Pid, {fetch, "bingo"}),
-    0 = gen_server:call(Pid, size).
+    not_found = expiring_records:fetch("bingo", Pid),
+    0 = expiring_records:size(Pid).
 
