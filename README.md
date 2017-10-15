@@ -1,9 +1,13 @@
-erl-expiring-records
-=====
+# erl-expiring-records
 
-An OTP application
+[![Build status](https://travis-ci.org/snorristurluson/erl-expiring-records.svg?branch=master)](https://travis-ci.org/snorristurluson/erl-expiring-records#)
 
-Build
------
+A Key/Value store with expiring records.
+
+## Build
 
     $ rebar3 compile
+
+## Test
+
+    $ rebar3 ct --suite app_test
