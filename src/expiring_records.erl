@@ -13,7 +13,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/0, stop/0, clear/0, store/3, fetch/1, size/0]).
+-export([start/0, stop/0, clear/0, store/3, fetch/1, size/0, trim/0]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -95,6 +95,9 @@ fetch(Key) ->
 size() ->
     gen_server:call(?MODULE, size).
 
+trim() ->
+    gen_server:call(?MODULE, trim).
+
 clear() ->
     gen_server:call(?MODULE, clear).
 
@@ -166,6 +169,18 @@ handle_call({fetch, Key}, _From, State) ->
 handle_call(size, _From, State) ->
     Size = mnesia:table_info(expiring_records, size),
     {reply, Size, State};
+
+handle_call(trim, _From, State) ->
+    Trans = fun() ->
+        Now = erlang:system_time(second),
+        MatchHead = #record{key='$1', expires_at = '$2', _='_'},
+        Guard = {'>', Now, '$2'},
+        Result = '$1',
+        ExpiredKeys = mnesia:select(expiring_records, [{MatchHead, [Guard], [Result]}]),
+        delete_records(ExpiredKeys)
+    end,
+    {atomic, ok} = mnesia:transaction(Trans),
+    {reply, ok, State};
 
 handle_call(clear, _From, State) ->
     mnesia:clear_table(expiring_records),
@@ -256,3 +271,10 @@ prepare_table() ->
             ok
     end,
     mnesia:wait_for_tables([expiring_records], infinite).
+
+delete_records([]) ->
+    ok;
+
+delete_records([Head | Tail]) ->
+    mnesia:delete(expiring_records, Head, write),
+    delete_records(Tail).
