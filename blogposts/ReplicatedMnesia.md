@@ -47,7 +47,7 @@ convenient as it automatically builds the module upon entering the
 Erlang shell and allows me to call the module functions from the
 command line.
 
-```erlang
+```
 Snorris-MBP-2:erl-expiring-records snorri$ rebar3 shell
 ===> Verifying dependencies...
 ===> Compiling expiring_records
@@ -74,7 +74,7 @@ Anyway, this is still just one node. Let's shut this one down and start
 two new ones - this time I start it up with an extra argument to give it
 a name.
 
-```erlang
+```
 Snorris-MBP-2:erl-expiring-records snorri$ rebar3 shell --sname=bilbo
 ===> Verifying dependencies...
 ===> Compiling expiring_records
@@ -84,7 +84,7 @@ Eshell V9.1.1  (abort with ^G)
 (bilbo@Snorris-MBP-2)1> 
 ```
 And the second one:
-```erlang
+```
 Snorris-MacBook-Pro-2:erl-expiring-records snorri$ rebar3 shell --sname=gandalf
 ===> Verifying dependencies...
 ===> Compiling expiring_records
@@ -96,7 +96,7 @@ Eshell V9.1.1  (abort with ^G)
 Note that the prompt changes to show you the name of the node - very
 convenient. In one of the nodes, I have to tell Mnesia to create a schema
 that includes both nodes:
-```erlang
+```
 (gandalf@Snorris-MBP-2)1> mnesia:create_schema(['bilbo@Snorris-MBP-2', 'gandalf@Snorris-MBP-2']).
 ok
 ```
@@ -130,7 +130,7 @@ prepare_table() ->
 ```
 
 Anyway, let's fire up Mnesia on both nodes, as well as the module:
-```erlang
+```
 (gandalf@Snorris-MBP-2)2> mnesia:start().
 ok
 (gandalf@Snorris-MBP-2)3> expiring_records:start().
@@ -145,7 +145,7 @@ ok
 ```
 Now I should be able to store a record in one node and fetch it on the
 other:
-```erlang
+```
 (bilbo@Snorris-MBP-2)3> expiring_records:store("bingo", "bongo", erlang:system_time(seconds)+60).  
 ok
 
