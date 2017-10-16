@@ -27,9 +27,15 @@ all() -> [
     trim_when_empty_doesnt_crash
 ].
 
-init_per_testcase(_, Config) ->
+init_per_suite(Config) ->
     mnesia:create_schema([node()]),
     mnesia:start(),
+    Config.
+
+end_per_suite(Config) ->
+    Config.
+
+init_per_testcase(_, Config) ->
     {ok, Pid} = expiring_records:start(),
     expiring_records:clear(),
     [{pid, Pid} | Config].
