@@ -24,7 +24,9 @@ all() -> [
     expired_record_is_removed,
     size_is_one_after_adding_one_record,
     trim_expired_records,
-    trim_when_empty_doesnt_crash
+    trim_when_empty_doesnt_crash,
+    composite_key,
+    erase_key
 ].
 
 init_per_suite(Config) ->
@@ -95,3 +97,13 @@ trim_expired_records(_Config) ->
 
 trim_when_empty_doesnt_crash(_Config) ->
     expiring_records:trim().
+
+composite_key(_Config) ->
+    ok = expiring_records:store({"bingo", "parlor"}, "bongo", erlang:system_time(second) + 3600),
+    {ok, "bongo"} = expiring_records:fetch({"bingo", "parlor"}).
+
+erase_key(_Config) ->
+    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second) + 3600),
+    ok = expiring_records:erase("bingo"),
+    not_found = expiring_records:fetch("bingo"),
+    0 = expiring_records:size().

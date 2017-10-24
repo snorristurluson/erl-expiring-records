@@ -13,7 +13,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/0, stop/0, clear/0, store/3, fetch/1, size/0, trim/0]).
+-export([start/0, stop/0, clear/0, store/3, fetch/1, size/0, trim/0, erase/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -101,6 +101,9 @@ trim() ->
 clear() ->
     gen_server:call(?MODULE, clear).
 
+erase(Key) ->
+    gen_server:call(?MODULE, {erase, Key}).
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -159,6 +162,19 @@ handle_call({fetch, Key}, _From, State) ->
                         mnesia:delete(expiring_records, Key, write),
                         not_found
                 end;
+            [] ->
+                not_found
+        end
+    end,
+    {atomic, Result} = mnesia:transaction(Trans),
+    {reply, Result, State};
+
+handle_call({erase, Key}, _From, State) ->
+    Trans = fun() ->
+        Result = mnesia:match_object(expiring_records, #record{key = Key, value = '_', expires_at = '_'}, read),
+        case Result of
+            [{record, Key, _, _}] ->
+                mnesia:delete(expiring_records, Key, write);
             [] ->
                 not_found
         end
