@@ -212,7 +212,7 @@ handle_call({search, KeyMatch}, _From, State) ->
             [] ->
                 not_found;
             Items ->
-                Items
+                filter_expired(Items)
         end
     end,
     {atomic, Result} = mnesia:transaction(Trans),
@@ -310,3 +310,17 @@ delete_records([]) ->
 delete_records([Head | Tail]) ->
     mnesia:delete(expiring_records, Head, write),
     delete_records(Tail).
+
+
+filter_expired([]) ->
+    [];
+
+filter_expired([Head|Tail]) ->
+    ExpiresAt = Head#record.expires_at,
+    Now = erlang:system_time(second),
+    case Now < ExpiresAt of
+        true ->
+            [Head|filter_expired(Tail)];
+        _ ->
+            filter_expired(Tail)
+    end.

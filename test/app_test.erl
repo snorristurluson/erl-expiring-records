@@ -115,6 +115,7 @@ search_partial_key(_Config) ->
     ok = expiring_records:store({"smoking", "parlor"}, "bongo", erlang:system_time(second) + 3600),
     ok = expiring_records:store("smoking", "bongo", erlang:system_time(second) + 3600),
     ok = expiring_records:store("parlor", "bongo", erlang:system_time(second) + 3600),
+    ok = expiring_records:store({"reading", "parlor"}, "bongo", erlang:system_time(second) - 1),
     [A, B] = expiring_records:search({'_', "parlor"}),
     {"bingo", "parlor"} = A#record.key,
     {"smoking", "parlor"} = B#record.key.
