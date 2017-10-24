@@ -26,7 +26,8 @@ all() -> [
     trim_expired_records,
     trim_when_empty_doesnt_crash,
     composite_key,
-    erase_key
+    erase_key,
+    search_partial_key
 ].
 
 init_per_suite(Config) ->
@@ -107,3 +108,13 @@ erase_key(_Config) ->
     ok = expiring_records:erase("bingo"),
     not_found = expiring_records:fetch("bingo"),
     0 = expiring_records:size().
+
+search_partial_key(_Config) ->
+    ok = expiring_records:store({"bingo", "parlor"}, "bongo", erlang:system_time(second) + 3600),
+    ok = expiring_records:store("bingo", "bongo", erlang:system_time(second) + 3600),
+    ok = expiring_records:store({"smoking", "parlor"}, "bongo", erlang:system_time(second) + 3600),
+    ok = expiring_records:store("smoking", "bongo", erlang:system_time(second) + 3600),
+    ok = expiring_records:store("parlor", "bongo", erlang:system_time(second) + 3600),
+    [A, B] = expiring_records:search({'_', "parlor"}),
+    {"bingo", "parlor"} = A#record.key,
+    {"smoking", "parlor"} = B#record.key.
